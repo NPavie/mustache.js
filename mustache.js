@@ -400,18 +400,21 @@ Context.prototype.lookup = function lookup (name) {
     var context = this, intermediateValue, names, index, lookupHit = false;
 
     while (context) {
-      if (name.indexOf('.') > 0) {
+      if (name.indexOf('.') > 0 || name.indexOf('[') > 0) {
         intermediateValue = context.view;
-        names = name.split('.');
-        index = 0;
+        names = name.split(/\[|\./).map(
+          (newName) =>  newName.replaceAll(/\]|\"|\'/g,'').trim()
+        );
 
+        index = 0;
         /**
-         * Using the dot notion path in `name`, we descend through the
-         * nested objects.
+         * Using both dot and bracket notion path in `name`, we descend 
+         * through the nested objects.
          *
          * To be certain that the lookup has been successful, we have to
          * check if the last object in the path actually has the property
-         * we are looking for. We store the result in `lookupHit`.
+         * or the indexed value (if it is an array) we are looking for.
+         * We store the result in `lookupHit`.
          *
          * This is specially necessary for when the value has been set to
          * `undefined` and we want to avoid looking up parent contexts.
@@ -425,11 +428,24 @@ Context.prototype.lookup = function lookup (name) {
         while (intermediateValue != null && index < names.length) {
           if (index === names.length - 1)
             lookupHit = (
-              hasProperty(intermediateValue, names[index])
-              || primitiveHasOwnProperty(intermediateValue, names[index])
+              hasProperty(
+                intermediateValue,
+                names[index]
+              ) || primitiveHasOwnProperty(
+                intermediateValue,
+                names[index]
+              ) || (
+                Array.isArray(intermediateValue) && 
+                /^\d+$/.test(names[index]) && 
+                intermediateValue.length > +names[index]
+              )
             );
 
-          intermediateValue = intermediateValue[names[index++]];
+          intermediateValue = intermediateValue[
+            Array.isArray(intermediateValue) ? 
+              +names[index++] :
+              names[index++]
+          ];
         }
       } else {
         intermediateValue = context.view[name];
