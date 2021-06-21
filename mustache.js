@@ -436,14 +436,20 @@ Context.prototype.lookup = function lookup (name) {
                 names[index]
               ) || (
                 Array.isArray(intermediateValue) && 
-                /^\d+$/.test(names[index]) && 
-                intermediateValue.length > +names[index]
+                  /^-?\d+$/.test(names[index]) &&
+                  ( +names[index] >= 0 ? 
+                    (intermediateValue.length > +names[index]) :
+                    (0 <= (intermediateValue.length + (+names[index])))
+                  )
               )
             );
 
           intermediateValue = intermediateValue[
-            Array.isArray(intermediateValue) ? 
-              +names[index++] :
+            Array.isArray(intermediateValue) ?
+              ( +names[index] >= 0 ?
+                  +names[index++] :
+                  intermediateValue.length + (+names[index++])
+              ) :
               names[index++]
           ];
         }
